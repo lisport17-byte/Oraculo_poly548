@@ -1,7 +1,7 @@
-const TelegramBot = require('node-telegram-bot-api');
 const http = require('http');
 const axios = require('axios');
 const fs = require('fs');
+from notificador import enviar_telegram # NUEVO: Importamos Telegram
 
 // --- 1. PARCHE FANTASMA ---
 const PORT = process.env.PORT || 10000;
@@ -14,36 +14,9 @@ const groqApiKey = process.env.GROQ_API_KEY;
 
 console.log("==> Iniciando Secuencia de Arranque Centinela 548...");
 
-// --- 3. TU ANTENA DIRECTA (TRADUCIDA A JAVASCRIPT) ---
-async function enviarTelegramDirecto(mensaje) {
-    if (!token || !chatId) {
-        console.log("Faltan credenciales de Telegram.");
-        return;
-    }
-    
-    const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    const payload = {
-        chat_id: chatId,
-        text: mensaje,
-        parse_mode: "HTML", // Usaremos HTML como pediste para la prueba
-        disable_web_page_preview: true
-    };
-    
-    try {
-        await axios.post(url, payload, { timeout: 5000 });
-        console.log("==> Señal enviada a Telegram con éxito.");
-    } catch (error) {
-        console.error("⚠️ Error en la antena directa:", error.response ? error.response.data : error.message);
-    }
-}
-
 // EJECUTAMOS TU PRUEBA AISLADA AL ARRANCAR
-enviarTelegramDirecto("🔌 <b>Conexión a la Matrix establecida.</b> El Oráculo está en línea. Protocolo 548 activo.");
+enviar_telegram("🔌 <b>Conexión a la Matrix establecida.</b> El Oráculo está en línea. Protocolo 548 activo.");
 
-// --- 4. RECEPTOR DE COMANDOS (MODO SILENCIOSO) ---
-// Mantenemos esto SOLO para escuchar comandos como /fallo, pero silenciamos sus errores de red
-const bot = new TelegramBot(token, { polling: true });
-bot.on('polling_error', () => { /* Silencio absoluto, ignoramos la interferencia de Render */ });
 
 const archivoMemoria = 'memoria_errores.json';
 let memoriaErrores = [];
@@ -56,7 +29,7 @@ bot.onText(/\/fallo (.+) - (.+)/, (msg, match) => {
     fs.writeFileSync(archivoMemoria, JSON.stringify(memoriaErrores, null, 2));
     
     // Usamos la antena directa para responder
-    enviarTelegramDirecto(`🧠 <b>Lección Aprendida:</b>\nCA: <code>${ca}</code>\nMotivo: ${motivo}\n\nLa energía ha sido recalibrada.`);
+    enviar_telegram(`🧠 <b>Lección Aprendida:</b>\nCA: <code>${ca}</code>\nMotivo: ${motivo}\n\nLa energía ha sido recalibrada.`);
 });
 
 // --- 5. EL CEREBRO DE LA IA (GROQ) ---
@@ -127,7 +100,7 @@ async function cazarGemas() {
                                              `🧠 <b>Oráculo:</b>\n${analisisIA}\n\n` +
                                              `📊 <a href="https://dexscreener.com/solana/${tokenAddress}">Ver Gráfico en DexScreener</a>`;
                         
-                        enviarTelegramDirecto(mensajeFinal);
+                        enviar_telegram(mensajeFinal);
                     }
                 }
             }
