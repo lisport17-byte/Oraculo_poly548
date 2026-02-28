@@ -1,7 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const http = require('http');
 const axios = require('axios');
-const fs = require('fs'); // Librería para crear la Memoria de Errores
+const fs = require('fs');
 
 // --- 1. EL PARCHE FANTASMA PARA RENDER ---
 const PORT = process.env.PORT || 10000;
@@ -11,11 +11,20 @@ const server = http.createServer((req, res) => {
 });
 server.listen(PORT, () => console.log(`==> Servidor activo en puerto ${PORT}`));
 
-// --- 2. IDENTIDAD Y CONEXIÓN ---
+// --- 2. IDENTIDAD Y CONEXIÓN REFORZADA ---
 const token = process.env.TELEGRAM_TOKEN;
 const chatId = process.env.CHAT_ID;
 const groqApiKey = process.env.GROQ_API_KEY;
-const bot = new TelegramBot(token, {polling: true});
+
+// Hemos amplificado la antena de polling para evitar micro-cortes de Render
+const bot = new TelegramBot(token, {
+    polling: {
+        interval: 1000,
+        autoStart: true
+    }
+});
+
+console.log("==> Sistema Centinela 548 activado... Antena amplificada.");
 
 // --- 3. INICIALIZAR MEMORIA DE ERRORES ---
 const archivoMemoria = 'memoria_errores.json';
@@ -30,7 +39,6 @@ if (fs.existsSync(archivoMemoria)) {
 }
 
 // --- 4. COMANDO PARA ENSEÑAR AL BOT ---
-// Uso en Telegram: /fallo [CA] - [Motivo]
 bot.onText(/\/fallo (.+) - (.+)/, (msg, match) => {
     const ca = match[1].trim();
     const motivo = match[2].trim();
@@ -38,30 +46,29 @@ bot.onText(/\/fallo (.+) - (.+)/, (msg, match) => {
     memoriaErrores.push({ ca, motivo, fecha: new Date().toISOString() });
     fs.writeFileSync(archivoMemoria, JSON.stringify(memoriaErrores, null, 2));
     
-    bot.sendMessage(chatId, `🧠 **Lección Aprendida:**\nCA: \`${ca}\`\nMotivo: ${motivo}\n\nLa energía ha sido recalibrada. La IA no repetirá este patrón.`, {parse_mode: 'Markdown'});
+    bot.sendMessage(chatId, `🧠 **Lección Aprendida:**\nCA: \`${ca}\`\nMotivo: ${motivo}\n\nLa energía ha sido recalibrada.`, {parse_mode: 'Markdown'});
 });
 
 // --- 5. EL CEREBRO DE LA IA (GROQ) CON MEMORIA ---
 async function consultarOraculoIA(datosDelToken) {
     try {
-        // Le pasamos los últimos 5 errores a la IA para que aprenda del contexto
-        const contextoErrores = memoriaErrores.slice(-5).map(e => `Fallo previo por: ${e.motivo}`).join(" | ");
+        const contextoErrores = memoriaErrores.slice(-5).map(e => `Fallo: ${e.motivo}`).join(" | ");
 
         const promptSystem = `Eres un trader experto de la élite y auditor de contratos en Solana. No haces scalping. 
         Analiza estos datos del token: ${JSON.stringify(datosDelToken)}.
-        Evalúa estrictamente: 1. Buen volumen. 2. Liquidez para cobrar profit. 3. No estafa. 4. Control de ballenas.
+        Evalúa: 1. Buen volumen. 2. Liquidez. 3. No estafa. 4. Control de ballenas.
         
-        ATENCIÓN - HISTORIAL DE ERRORES RECIENTES: [${contextoErrores}]
-        Aprende de estos errores. Si los datos actuales muestran similitudes sospechosas con nuestros fallos pasados, rechaza el token inmediatamente.
+        ATENCIÓN - ERRORES RECIENTES: [${contextoErrores}]
+        Si ves similitudes sospechosas, rechaza.
         
-        SI Y SOLO SI el token cumple con todo, tiene Mcap 30k-100k y no se parece a las trampas pasadas, tu ÚNICA respuesta debe ser exactamente: "luz verde dispara, es el momento, aquí la elite está concentrando energía, próximamente se verán los movimientos". 
+        SI Y SOLO SI el token cumple todo y tiene Mcap 30k-100k, tu ÚNICA respuesta debe ser exactamente: "luz verde dispara, es el momento, aquí la elite está concentrando energía, próximamente se verán los movimientos". 
         Si hay dudas, responde "RECHAZADO" y el motivo.`;
 
         const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
             model: "llama3-70b-8192",
             messages: [
                 { role: "system", content: promptSystem },
-                { role: "user", content: "Analiza esta gema y cruza los datos con la memoria de errores." }
+                { role: "user", content: "Analiza esta gema y cruza con memoria." }
             ],
             temperature: 0.1
         }, {
@@ -82,15 +89,14 @@ const tokensAnalizados = new Set();
 
 async function cazarGemas() {
     try {
+        console.log("🔍 Escaneando radar 30k-100k...");
         const response = await axios.get('https://api.dexscreener.com/token-profiles/latest/v1');
         const tokensSolana = response.data.filter(t => t.chainId === 'solana');
 
         for (const tokenData of tokensSolana) {
             const tokenAddress = tokenData.tokenAddress;
 
-            // Evitar analizar tokens ya reportados en la memoria de errores
             if (memoriaErrores.some(e => e.ca === tokenAddress)) continue;
-            
             if (tokensAnalizados.has(tokenAddress)) continue;
             tokensAnalizados.add(tokenAddress);
 
@@ -127,13 +133,14 @@ async function cazarGemas() {
             await new Promise(resolve => setTimeout(resolve, 2000)); 
         }
     } catch (error) {
-        console.error("Interferencia:", error.message);
+        console.error("Interferencia de rastreo:", error.message);
     }
 }
 
 setInterval(cazarGemas, 5 * 60 * 1000);
 cazarGemas(); 
 
+// --- DIAGNÓSTICO PROFUNDO ---
 bot.on('polling_error', (error) => {
-    console.log("🚨 REPORTE DE ERROR EXACTO TELEGRAM:", error.code, error.message);
+    console.log("🚨 ALERTA CRÍTICA TELEGRAM:", error.code, "-", error.message);
 });
