@@ -135,5 +135,5 @@ setInterval(cazarGemas, 5 * 60 * 1000);
 cazarGemas(); 
 
 bot.on('polling_error', (error) => {
-    if (error.code !== 'ETELEGRAM') console.log("Error de conexión:", error.code);
+    console.log("🚨 REPORTE DE ERROR EXACTO TELEGRAM:", error.code, error.message);
 });
