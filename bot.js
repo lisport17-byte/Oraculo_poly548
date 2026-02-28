@@ -19,8 +19,15 @@ const groqApiKey = process.env.GROQ_API_KEY;
 // Hemos amplificado la antena de polling para evitar micro-cortes de Render
 const bot = new TelegramBot(token, {
     polling: {
-        interval: 1000,
-        autoStart: true
+        interval: 2000, // Aumentado a 2s para mayor estabilidad en Render
+        autoStart: true,
+        params: { timeout: 10 } // Long polling optimizado
+    },
+    request: {
+        agentOptions: {
+            keepAlive: true,
+            family: 4 // Fuerza IPv4 para evitar errores de red comunes
+        }
     }
 });
 
